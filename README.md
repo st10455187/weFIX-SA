@@ -1,11 +1,66 @@
-# Sample Snack app
+# 🏙️ WeFix SA — Citizen Reporting App
 
-Open the `App.js` file to start writing some code. You can preview the changes directly on your phone or tablet by scanning the **QR code** or use the iOS or Android emulators. When you're done, click **Save** and share the link!
+WeFix SA is a mobile application designed to empower citizens to report municipal service issues directly to local authorities.  
+Built with **React Native**, it bridges the communication gap between citizens and municipalities, ensuring faster responses, transparency, and cleaner communities.
 
-When you're ready to see everything that Expo provides (or if you want to use your own editor) you can **Download** your project and use it with [expo cli](https://docs.expo.dev/get-started/installation/#expo-cli)).
+---
 
-All projects created in Snack are publicly available, so you can easily share the link to this project via link, or embed it on a web page with the `<>` button.
+## 📱 Features
 
-If you're having problems, you can tweet to us [@expo](https://twitter.com/expo) or ask in our [forums](https://forums.expo.dev/c/expo-dev-tools/61) or [Discord](https://chat.expo.dev/).
+### 👥 User Roles
+- **Citizen:** Can log in, submit reports, view their submitted reports, and monitor progress.
+- **Admin:** Can log in to view and manage citizen reports (no access to Account screen).
 
-Snack is Open Source. You can find the code on the [GitHub repo](https://github.com/expo/snack).
+### 🗺️ Reporting Functionality
+- Submit detailed reports with:
+  - Issue type (e.g. potholes, streetlights, garbage collection, etc.)
+  - Description
+  - City & Municipality (auto-linked)
+  - Optional image (upload from gallery or camera)
+  - Current GPS-based location
+
+### 📸 Media Upload
+- Capture or upload images to support each report.
+- Preview images before submission.
+
+### 📍 Location Detection
+- Automatically fetches and fills in your current address using GPS.
+
+### 🧾 Report Management
+- Displays a list of all submitted reports.
+- Tracks status updates (In Progress, Resolved, Pending).
+
+### 👮 Role-based Access Control
+- **Admins** cannot access the Account screen.
+- **Citizens** have a personalized Account view.
+
+### 🔐 Authentication
+- Login screen with role selection:
+  - `Citizen` → Username: `user`, Password: `user123`
+  - `Admin` → Username: `admin`, Password: `admin123`
+- Friendly alerts for successful or failed logins.
+
+### 🧭 Navigation
+- Splash screen → Welcome → Login → Main App
+- Drawer navigation with:
+  - Home
+  - Reports
+  - Volunteer
+  - Account *(Citizen only)*
+- Bottom tab navigation for quick access.
+
+---
+
+## ⚙️ Tech Stack
+
+| Category | Technology |
+|-----------|-------------|
+| Framework | React Native (Expo) |
+| Navigation | React Navigation (Stack, Drawer, and Bottom Tabs) |
+| State Management | React Context API |
+| Image Handling | Expo Image Picker |
+| Location | Expo Location |
+| Icons | Expo Vector Icons (Ionicons) |
+
+
+
