@@ -1,0 +1,27 @@
+{
+  "categories": [
+    "Water and Sanitation",
+    "Electricity",
+    "Roads and Transport",
+    "Waste Management",
+    "Health",
+    "Education",
+    "Public Safety",
+    "Other"
+  ],
+  "municipalities": [
+    "City of Cape Town",
+    "eThekwini Metropolitan",
+    "City of Johannesburg",
+    "City of Tshwane",
+    "Nelson Mandela Bay",
+    "Buffalo City",
+    "Mangaung Metropolitan",
+    "Other"
+  ],
+  "statuses": [
+    "submitted",
+    "in progress",
+    "resolved"
+  ]
+}
