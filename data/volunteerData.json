@@ -1,0 +1,5 @@
+[
+{"id":"v1","title":"Community Clean-Up","description":"Join a weekend litter pick in Sandton.","city":"Sandton","province":"Gauteng","contact":"cleanup@savolunteer.org"},
+{"id":"v2","title":"Tree Planting","description":"Help plant trees in Soweto.","city":"Soweto","province":"Gauteng","contact":"trees@savolunteer.org"},
+{"id":"v3","title":"Beach Clean","description":"Coastal clean-up near Durban beachfront.","city":"Durban","province":"KwaZulu-Natal","contact":"beach@savolunteer.org"}
+]

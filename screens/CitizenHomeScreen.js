@@ -1,243 +1,520 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
-  FlatList,
-  StyleSheet,
+  TextInput,
   TouchableOpacity,
+  FlatList,
+  ScrollView,
+  SafeAreaView,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Image,
+  Modal,
+  Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
+import municipalities from '../data/municipalityData.json';
+import { ReportContext } from '../context/ReportContext';
+
+const COLORS = {
+  background: '#E8E3E1',
+  inputBackground: '#ffffff',
+  primaryText: '#000000',
+  secondaryText: '#4c4c4c',
+  button: '#000000',
+};
 
 export default function CitizenHomeScreen({ navigation }) {
-  const [reports, setReports] = useState([]);
-  const [user, setUser] = useState(null);
+  const { reports, addReport } = useContext(ReportContext); // ✅ shared context
 
+  const [reportType, setReportType] = useState('Streetlights');
+  const [description, setDescription] = useState('');
+  const [streetName, setStreetName] = useState('');
+  const [streetNumber, setStreetNumber] = useState('');
+  const [city, setCity] = useState('');
+  const [municipality, setMunicipality] = useState('');
+  const [imageUri, setImageUri] = useState(null);
+  const [isDropdownVisible, setDropdownVisible] = useState(false);
+  const [loadingLocation, setLoadingLocation] = useState(false);
+
+  const issueTypes = [
+    'Streetlights',
+    'Potholes',
+    'Garbage Collection',
+    'Water Leakage',
+    'Sewage Problems',
+    'Illegal Dumping',
+    'Road Damage',
+    'Noise Pollution',
+    'Broken Traffic Lights',
+    'Other',
+  ];
+
+  // --- Auto update municipality when city changes ---
   useEffect(() => {
-    loadUserAndReports();
-  }, []);
+    const found = municipalities.find(
+      (item) => item.city.toLowerCase() === city.toLowerCase()
+    );
+    setMunicipality(found ? found.municipality : '');
+  }, [city]);
 
-  const loadUserAndReports = async () => {
+  // --- Pick image ---
+  const pickImage = async () => {
+    const result = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!result.granted) {
+      Alert.alert('Permission required', 'Please allow gallery access.');
+      return;
+    }
+
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+    });
+
+    if (!res.canceled) setImageUri(res.assets[0].uri);
+  };
+
+  // --- Take photo ---
+  const takePhoto = async () => {
+    const result = await ImagePicker.requestCameraPermissionsAsync();
+    if (!result.granted) {
+      Alert.alert('Permission required', 'Please allow camera access.');
+      return;
+    }
+
+    const res = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    if (!res.canceled) setImageUri(res.assets[0].uri);
+  };
+
+  // --- Fetch current location ---
+  const fetchCurrentLocation = async () => {
     try {
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        setUser(JSON.parse(userData));
+      setLoadingLocation(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission denied', 'Please enable location services.');
+        setLoadingLocation(false);
+        return;
       }
 
-      const allReports = await AsyncStorage.getItem('reports');
-      if (allReports) {
-        const reportsData = JSON.parse(allReports);
-        // Filter reports for current user
-        const userReports = reportsData.filter(report => 
-          report.submittedBy === JSON.parse(userData).username
-        );
-        setReports(userReports.reverse().slice(0, 10)); // Show latest 10 reports
+      const location = await Location.getCurrentPositionAsync({});
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (address) {
+        setStreetName(address.street || '');
+        setStreetNumber(address.streetNumber || '');
+        setCity(address.city || '');
       }
-    } catch (error) {
-      console.error('Error loading data:', error);
+
+      setLoadingLocation(false);
+      Alert.alert('Success', 'Your current location has been added.');
+    } catch (err) {
+      console.log(err);
+      setLoadingLocation(false);
+      Alert.alert('Error', 'Could not fetch your location.');
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'submitted': return '#FF9500';
-      case 'in progress': return '#007AFF';
-      case 'resolved': return '#34C759';
-      default: return '#8E8E93';
+  // --- Submit Report ---
+  const handleSubmit = () => {
+    if (!description || !city) {
+      Alert.alert('Missing Info', 'Please fill all required fields.');
+      return;
     }
+
+    const newReport = {
+      id: Date.now().toString(),
+      category: reportType,
+      description,
+      address: `${streetNumber} ${streetName}`,
+      municipality,
+      city,
+      imageUrl: imageUri,
+      status: 'In Progress',
+      createdAt: new Date().toISOString(),
+    };
+
+    addReport(newReport); // ✅ Add to shared context
+    Alert.alert('Report Submitted ✅', 'Your report has been added.');
+
+    // Reset form
+    setDescription('');
+    setStreetName('');
+    setStreetNumber('');
+    setCity('');
+    setMunicipality('');
+    setImageUri(null);
   };
 
-  const renderReportItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.reportCard}
-      onPress={() => navigation.navigate('CitizenReportDetail', { reportId: item.id })}
-    >
-      <View style={styles.reportHeader}>
-        <Text style={styles.reportTitle}>{item.title}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{item.status}</Text>
+  // --- Report Card ---
+  const ReportCard = ({ report }) => (
+    <View style={styles.card}>
+      <View style={styles.cardContent}>
+        <Image
+          source={{
+            uri:
+              report.imageUrl ||
+              'https://via.placeholder.com/100x100?text=Report',
+          }}
+          style={styles.cardImage}
+        />
+        <View style={{ flex: 1 }}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{report.category}</Text>
+            <Text
+              style={[
+                styles.cardStatus,
+                {
+                  color:
+                    report.status === 'Resolved'
+                      ? '#4AC87F'
+                      : report.status === 'In Progress'
+                      ? '#55C2E7'
+                      : '#FF4A7F',
+                },
+              ]}
+            >
+              {report.status}
+            </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Ionicons name="location-outline" size={14} color="#555" />
+            <Text style={styles.detailText}>{report.address}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Ionicons name="business-outline" size={14} color="#555" />
+            <Text style={styles.detailText}>{report.municipality}</Text>
+          </View>
+
+          <Text style={styles.cardDescription} numberOfLines={2}>
+            {report.description}
+          </Text>
         </View>
       </View>
-      <Text style={styles.reportCategory}>{item.category}</Text>
-      <Text style={styles.reportLocation}>{item.location}, {item.municipality}</Text>
-      <Text style={styles.reportDate}>
-        {new Date(item.date).toLocaleDateString()}
-      </Text>
-      {item.adminNote && (
-        <View style={styles.noteContainer}>
-          <Text style={styles.noteLabel}>Admin Note:</Text>
-          <Text style={styles.noteText}>{item.adminNote}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
+    </View>
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Recent Reports</Text>
-      <Text style={styles.subheader}>Welcome back, {user?.username}</Text>
-      
-      {reports.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No reports submitted yet</Text>
-          <TouchableOpacity 
-            style={styles.submitButton}
-            onPress={() => navigation.navigate('CitizenReports')}
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Greeting */}
+        <Text style={styles.hiText}>Hi</Text>
+        <Text style={styles.nameText}>James</Text>
+
+        {/* Form */}
+        <Text style={styles.formTitle}>Create a report</Text>
+
+        {/* Dropdown */}
+        <TouchableOpacity
+          style={styles.dropdown}
+          onPress={() => setDropdownVisible(true)}
+        >
+          <Text style={styles.dropdownText}>{reportType}</Text>
+          <Ionicons name="chevron-down" size={20} color={COLORS.primaryText} />
+        </TouchableOpacity>
+
+        {/* Dropdown Modal */}
+        <Modal
+          visible={isDropdownVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setDropdownVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPressOut={() => setDropdownVisible(false)}
           >
-            <Text style={styles.submitButtonText}>Submit Your First Report</Text>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Issue Type</Text>
+              {issueTypes.map((type, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[
+                    styles.modalOption,
+                    reportType === type && { backgroundColor: '#E5E5E5' },
+                  ]}
+                  onPress={() => {
+                    setReportType(type);
+                    setDropdownVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>{type}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </TouchableOpacity>
+        </Modal>
+
+        {/* Description */}
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Describe the issue..."
+          placeholderTextColor="#999"
+          multiline
+          value={description}
+          onChangeText={setDescription}
+        />
+
+        {/* Image Picker */}
+        <View style={styles.imageSection}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.previewImage} />
+          ) : (
+            <View style={styles.previewPlaceholder}>
+              <Ionicons name="image-outline" size={40} color="#888" />
+              <Text style={{ color: '#888' }}>No image selected</Text>
+            </View>
+          )}
+
+          <View style={styles.imageButtons}>
+            <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+              <Ionicons name="images-outline" size={20} color="#000" />
+              <Text style={styles.imageButtonText}>Gallery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
+              <Ionicons name="camera-outline" size={20} color="#000" />
+              <Text style={styles.imageButtonText}>Camera</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      ) : (
+
+        {/* Location */}
+        <TouchableOpacity
+          style={styles.locationButton}
+          onPress={fetchCurrentLocation}
+        >
+          <Ionicons name="location-outline" size={20} color="#fff" />
+          <Text style={styles.locationText}>
+            {loadingLocation ? 'Fetching Location...' : 'Use Current Location'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Address Fields */}
+        <TextInput
+          style={styles.input}
+          placeholder="Street Name"
+          placeholderTextColor="#999"
+          value={streetName}
+          onChangeText={setStreetName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Street Number"
+          placeholderTextColor="#999"
+          value={streetNumber}
+          onChangeText={setStreetNumber}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="City"
+          placeholderTextColor="#999"
+          value={city}
+          onChangeText={setCity}
+        />
+
+        {/* Municipality */}
+        {municipality ? (
+          <View style={styles.municipalityBox}>
+            <Ionicons name="business-outline" size={16} color="#000" />
+            <Text style={styles.municipalityText}>{municipality}</Text>
+          </View>
+        ) : null}
+
+        {/* Submit */}
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+          <Text style={styles.submitText}>Submit report</Text>
+        </TouchableOpacity>
+
+        {/* Reports List */}
+        <Text style={[styles.formTitle, { marginTop: 30 }]}>Your Reports</Text>
         <FlatList
           data={reports}
-          renderItem={renderReportItem}
-          keyExtractor={item => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => <ReportCard report={item} />}
+          scrollEnabled={false}
         />
-      )}
-
-      <TouchableOpacity 
-        style={styles.fab}
-        onPress={() => navigation.navigate('CitizenReports')}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  header: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#1C1C1E',
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 120,
   },
-  subheader: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
+  hiText: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.primaryText,
   },
-  reportCard: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  nameText: {
+    fontSize: 22,
+    color: COLORS.secondaryText,
+    marginBottom: 30,
   },
-  reportHeader: {
+  formTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.primaryText,
+    marginBottom: 15,
+  },
+  dropdown: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  reportTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
-    marginRight: 10,
-    color: '#1C1C1E',
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    alignItems: 'center',
+    height: 55,
+    backgroundColor: COLORS.inputBackground,
     borderRadius: 12,
-    minWidth: 80,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  dropdownText: { fontSize: 16, color: COLORS.primaryText },
+  input: {
+    backgroundColor: COLORS.inputBackground,
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    height: 55,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  textArea: { minHeight: 100, textAlignVertical: 'top', paddingTop: 15 },
+  imageSection: { marginBottom: 20 },
+  previewImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  previewPlaceholder: {
+    height: 180,
+    borderRadius: 10,
+    backgroundColor: '#f0f0f0',
     alignItems: 'center',
-  },
-  statusText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-    textTransform: 'capitalize',
-  },
-  reportCategory: {
-    color: '#666',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  reportLocation: {
-    color: '#666',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  reportDate: {
-    color: '#999',
-    fontSize: 12,
-  },
-  noteContainer: {
-    marginTop: 8,
-    padding: 10,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#007AFF',
-  },
-  noteLabel: {
-    fontWeight: 'bold',
-    fontSize: 12,
-    marginBottom: 4,
-    color: '#007AFF',
-  },
-  noteText: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 16,
-  },
-  emptyState: {
-    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 100,
+    marginBottom: 10,
   },
-  emptyStateText: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 20,
-    textAlign: 'center',
+  imageButtons: { flexDirection: 'row', justifyContent: 'space-between' },
+  imageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 10,
+    width: '48%',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  imageButtonText: { marginLeft: 8, fontWeight: '600' },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#000',
+    borderRadius: 10,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  locationText: {
+    color: '#fff',
+    fontSize: 15,
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  municipalityBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  municipalityText: {
+    fontSize: 16,
+    color: '#000',
+    marginLeft: 10,
+    fontWeight: '600',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: COLORS.button,
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 10,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardContent: { flexDirection: 'row' },
+  cardImage: {
+    width: 100,
+    height: 100,
     borderRadius: 10,
+    marginRight: 12,
   },
-  submitButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between', 
+    marginBottom: 4,
   },
-  listContent: {
-    paddingBottom: 20,
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    backgroundColor: '#007AFF',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  cardTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
+  cardStatus: { fontSize: 13, fontWeight: '600' },
+  detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  detailText: { fontSize: 12, color: '#555', marginLeft: 4 },
+  cardDescription: { fontSize: 13, color: '#777', marginTop: 5 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
   },
-  fabText: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
+  modalContent: {
+    backgroundColor: '#fff',
+    width: '80%',
+    borderRadius: 15,
+    padding: 20,
   },
+  modalTitle: { fontWeight: '700', fontSize: 18, marginBottom: 10 },
+  modalOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+  },
+  modalOptionText: { fontSize: 16, color: '#000' },
 });

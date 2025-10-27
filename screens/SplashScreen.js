@@ -1,27 +1,20 @@
 import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
 
 export default function SplashScreen({ navigation }) {
   useEffect(() => {
-    // Always go to LoginScreen after splash
-    const timer = setTimeout(() => {
-      navigation.replace('Login');
-    }, 2000); // Show splash for 2 seconds
-
-    return () => clearTimeout(timer); // Cleanup timer
-  }, [navigation]);
+    const timer = setTimeout(() => navigation.replace('Welcome'), 2000); // show splash for 2 seconds
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>WeFixSA</Text>
-      <Text style={styles.subtitle}>Municipality Service App</Text>
-      <ActivityIndicator size="large" color="#FFFFFF" style={styles.loader} />
-      <Text style={styles.loadingText}>Loading...</Text>
+      {/* 🖼️ Custom splash image */}
+      <Image
+        source={require('../assets/splashImage.png')} // make sure this image exists in your assets folder
+        style={styles.logo}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -29,26 +22,12 @@ export default function SplashScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF', // your theme color
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
   },
-  title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: 'white',
-    marginBottom: 40,
-  },
-  loader: {
-    marginBottom: 20,
-  },
-  loadingText: {
-    color: 'white',
-    fontSize: 16,
+  logo: {
+    width: 180, // adjust for your design
+    height: 180,
   },
 });

@@ -1,50 +1,35 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
-const SummaryCard = ({ title, count, color, onPress }) => {
+export default function SummaryCard({ title, value, color }) {
   return (
-    <TouchableOpacity 
-      style={[styles.card, { borderLeftColor: color }]}
-      onPress={onPress}
-    >
-      <Text style={styles.count}>{count}</Text>
+    <View style={[styles.card, { backgroundColor: color }]}>
+      <Text style={styles.value}>{value}</Text>
       <Text style={styles.title}>{title}</Text>
-    </TouchableOpacity>
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 12,
-    margin: 5,
-    flex: 1,
+    borderRadius: 18,
+    paddingVertical: 30,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderLeftWidth: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
   },
-  count: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 5,
+  value: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
   },
   title: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
+    fontSize: 14,
+    color: '#fff',
+    marginTop: 4,
   },
 });
-
-export default SummaryCard;

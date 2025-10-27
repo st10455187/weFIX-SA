@@ -2,90 +2,66 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  ImageBackground,
   StyleSheet,
-  Image,
+  TouchableOpacity,
 } from 'react-native';
 
 export default function WelcomeScreen({ navigation }) {
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>WeFixSA</Text>
-        <Text style={styles.subtitle}>Your Municipal Service Companion</Text>
-        
-        <View style={styles.featureList}>
-          <Text style={styles.featureItem}>• Report municipal issues</Text>
-          <Text style={styles.featureItem}>• Track report status</Text>
-          <Text style={styles.featureItem}>• Get timely updates</Text>
-          <Text style={styles.featureItem}>• Help improve your community</Text>
-        </View>
+    <ImageBackground
+      source={require('../assets/sandtonImage.jpeg')}
+      style={styles.background}
+      resizeMode="cover">
+      <View style={styles.overlay}>
+        <Text style={styles.title}>See it. Report it.{'\n'}We’ll fix it.</Text>
 
-        <TouchableOpacity 
+        <Text style={styles.subtitle}>
+          Connect citizens with local municipalities instantly.
+        </Text>
+
+        <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('Login')}
-        >
+          onPress={() => navigation.navigate('Login')}>
           <Text style={styles.buttonText}>Get Started</Text>
         </TouchableOpacity>
       </View>
-      
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Making Communities Better, Together</Text>
-      </View>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
-    backgroundColor: '#007AFF',
+    justifyContent: 'flex-end',
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 30,
+  overlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingVertical: 40,
+    paddingHorizontal: 25,
   },
   title: {
-    fontSize: 48,
+    fontSize: 30,
+    color: '#fff',
     fontWeight: 'bold',
-    color: 'white',
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 18,
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  featureList: {
-    marginBottom: 50,
-    alignItems: 'flex-start',
-  },
-  featureItem: {
     fontSize: 16,
-    color: 'white',
-    marginBottom: 10,
+    color: '#D3D3D3',
+    marginBottom: 30,
   },
   button: {
-    backgroundColor: 'white',
-    paddingHorizontal: 40,
+    backgroundColor: '#fff',
     paddingVertical: 15,
-    borderRadius: 25,
-  },
-  buttonText: {
-    color: '#007AFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  footer: {
-    padding: 20,
+    borderRadius: 30,
     alignItems: 'center',
   },
-  footerText: {
-    color: 'white',
-    fontSize: 14,
-    fontStyle: 'italic',
+  buttonText: {
+    color: '#000',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
